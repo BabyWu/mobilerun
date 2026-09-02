@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mobilerun-testkit"
+version = "0.1.0"
+description = "Independent batch regression testkit for mobilerun — treats mobilerun as a black-box CLI"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+mobilerun-test = "mobilerun_testkit.runner:main_entry"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mobilerun_testkit"]
+
+[tool.hatch.build.targets.wheel.shared-data]
+cases = "share/mobilerun-testkit/cases"

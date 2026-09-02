@@ -1,0 +1,35 @@
+# Smoke #5 — 真实业务 App 端到端:打开 DreamLike 并进入一个直播间看播。
+# 混合场景:agent 需要先打开 App、处理可能的引导页,再在直播间列表中选中一个
+# 直播间。验证点交给 AI 看最终截图(judge: ai_vision),因为「正在看播」的
+# UI 形态(播放画面、弹幕、礼物栏等)无法用固定的 a11y 文本断言。
+id: dreamlike-enter-liveroom
+title: 打开 DreamLike,进入任意直播间看播
+priority: smoke
+
+preconditions:
+  - "设备已 setup 且 ping 通过"
+  - "配置了可用的 LLM provider(默认用 config.yaml 里的 profile)"
+  - "设备上已安装 DreamLike 且已登录(未登录时可能有登录墙,见 known_limits)"
+  - "设备可联网;直播间列表非空(平台需有在播主播)"
+
+setup: |
+  mobilerun device press home
+
+task: "打开DreamLike应用，在直播列表中，选择第二个item进入看播"
+
+run_flags:
+  vision: false
+  steps: 20
+  reasoning: false
+  save_trajectory: action
+
+verify:
+  # 截图 + AI 判读:runner 存证并打 [AI-JUDGE-REQUIRED] 标记,PASS/FAIL 由 AI 给出
+  - judge: ai_vision
+    description: "直播间的公屏有内容"
+
+timeout: 420
+pass_criteria: "直播间的公屏有内容"
+cleanup: |
+  mobilerun device press home
+known_limits: "DreamLike 首次启动可能有引导页/登录墙/权限弹窗,20 步内可能只走到登录或授权页面;直播间列表为空或全部不可进时用例无法完成;App UI 改版后 AI 判读需人工复核"
