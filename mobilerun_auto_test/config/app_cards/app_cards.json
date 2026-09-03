@@ -1,0 +1,9 @@
+# App Card Configuration
+#
+# Maps Android package names to markdown documentation files.
+# Used by MobileAgent Manager for better planning.
+
+{
+  "com.android.settings": "android_settings.md",
+  "com.example.app": "example_app.md"
+}

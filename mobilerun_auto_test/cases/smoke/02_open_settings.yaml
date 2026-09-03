@@ -1,0 +1,30 @@
+id: open_settings
+title: Open Android Settings App
+priority: smoke
+
+preconditions:
+  - Android device connected
+
+setup: |
+  mobilerun device press home
+
+steps:
+  - Open the Settings app
+
+run_flags:
+  vision: false
+  reasoning: false
+  steps: 10
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_regex: "(?i)settings|com\\.android\\.settings"
+    description: "Settings app is in foreground"
+  - cmd: "mobilerun device screenshot"
+    save_to: settings-screen.png
+
+timeout: 120
+pass_criteria: "Settings app foreground confirmed via accessibility tree"
+
+cleanup: |
+  mobilerun device press home

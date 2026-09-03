@@ -1,0 +1,50 @@
+id: app_card_demo
+title: App Card - Custom App Test
+priority: full
+
+preconditions:
+  - Custom app installed (com.example.app)
+  - App Card configured for the app
+  - Reasoning mode enabled
+
+requires:
+  - cmd: "mobilerun device ui"
+    expect_contains: ["com.example.app"]
+    description: "Target app is installed"
+
+setup: |
+  mobilerun device press home
+
+test_data:
+  username: "test_user"
+  message: "Hello from autotest"
+
+steps:
+  - Open the example app
+  - Login with the test user
+  - Navigate to message screen
+  - Send the test message
+
+run_flags:
+  vision: true
+  reasoning: true
+  steps: 25
+  save_trajectory: action
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_contains: ["Hello from autotest"]
+    description: "Message appears in UI tree"
+  - cmd: "mobilerun device screenshot"
+    save_to: message-sent.png
+
+timeout: 600
+pass_criteria: "Message sent and confirmed in UI"
+
+cleanup: |
+  mobilerun device press back
+  mobilerun device press home
+
+known_limits:
+  pattern: "login.*failed|network.*error"
+  reason: "Login may fail in test environment without network"

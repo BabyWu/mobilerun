@@ -1,0 +1,31 @@
+id: repeat_flaky_test
+title: Repeat Mode - Flaky Test Detection
+priority: full
+
+preconditions:
+  - Device connected
+
+setup: |
+  mobilerun device press home
+
+steps:
+  - Open Settings app
+  - Navigate to WiFi settings
+
+run_flags:
+  vision: false
+  reasoning: false
+  steps: 10
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_regex: "(?i)wifi|wlan"
+    description: "WiFi settings visible"
+
+repeat: 3
+timeout: 180
+pass_criteria: "WiFi settings reached consistently (3/3)"
+
+cleanup: |
+  mobilerun device press back
+  mobilerun device press home

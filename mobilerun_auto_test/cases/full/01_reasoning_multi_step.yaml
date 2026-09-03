@@ -1,0 +1,42 @@
+id: reasoning_multi_step
+title: Reasoning Mode - Multi-step Task
+priority: full
+
+preconditions:
+  - Device connected
+  - Vision-capable LLM configured
+  - Manager/Executor LLMs loaded
+
+setup: |
+  mobilerun device press home
+
+test_data:
+  target_app: "Settings"
+  target_section: "About phone"
+
+steps:
+  - Open the Settings app
+  - Navigate to About phone section
+  - Confirm you reached the target
+
+run_flags:
+  vision: true
+  reasoning: true
+  steps: 15
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_regex: "(?i)about|version|model"
+    description: "About phone section visible in UI tree"
+  - cmd: "mobilerun device screenshot"
+    save_to: about-phone.png
+  - judge: ai_vision
+    description: "Screenshot shows About phone screen with device info"
+
+timeout: 300
+pass_criteria: "About phone screen reached and confirmed"
+
+cleanup: |
+  mobilerun device press back
+  mobilerun device press back
+  mobilerun device press home

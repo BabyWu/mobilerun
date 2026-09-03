@@ -1,0 +1,14 @@
+src/
+mobilerun_autotest.egg-info/
+dist/
+build/
+*.pyc
+__pycache__/
+.pytest_cache/
+*.log
+autotest-reports/
+evidence/
+.DS_Store
+*.swp
+*.swo
+*~
