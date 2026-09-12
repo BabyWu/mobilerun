@@ -25,10 +25,31 @@ try:
     from mobilerun.agent.droid.droid_agent import MobileAgent
     from mobilerun.agent.droid.events import ResultEvent
 except ImportError:
-    # For standalone testing without full mobilerun installation
+    # mobilerun may not be installed yet; _load_agent_symbols() binds these
+    # after bootstrap has installed it. See bootstrap.ensure_mobilerun().
     StartEvent = None
     MobileAgent = None
     ResultEvent = None
+
+
+def _load_agent_symbols() -> None:
+    """Bind MobileAgent and friends, installing mobilerun if it is missing."""
+    global StartEvent, MobileAgent, ResultEvent
+
+    if MobileAgent is not None:
+        return
+
+    from mobilerun_autotest.shared import load_mobilerun_symbols
+
+    load_mobilerun_symbols()
+
+    from llama_index.core.workflow import StartEvent as _StartEvent
+    from mobilerun.agent.droid.droid_agent import MobileAgent as _MobileAgent
+    from mobilerun.agent.droid.events import ResultEvent as _ResultEvent
+
+    StartEvent = _StartEvent
+    MobileAgent = _MobileAgent
+    ResultEvent = _ResultEvent
 
 from mobilerun_autotest.compiler import TestCaseCompiler
 from mobilerun_autotest.models import (
@@ -204,6 +225,8 @@ class CaseExecutor:
         """
         case_config = self.shared.merge_run_flags(case.run_flags)
 
+        _load_agent_symbols()
+
         agent = MobileAgent(
             goal=goal,
             config=case_config,
@@ -214,7 +237,7 @@ class CaseExecutor:
         )
 
         # Run with timeout
-        handler = agent.run(StartEvent())
+        handler = agent.run()
 
         result = await asyncio.wait_for(
             handler,

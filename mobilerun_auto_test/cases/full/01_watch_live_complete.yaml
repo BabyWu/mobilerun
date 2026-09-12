@@ -1,0 +1,48 @@
+id: watch_live_complete
+title: Watch Live Stream - Complete Test
+priority: full
+
+setup: |
+  mobilerun device press home
+  mobilerun device press home
+
+test_data:
+  app_package: "com.dream.like"
+  test_duration: "30 seconds"
+
+steps:
+  - Open Dream Show app (com.dream.like)
+  - If login screen appears, skip it (use guest mode or existing login)
+  - Navigate to Home tab
+  - Browse the live stream list
+  - Select the first available live stream with active viewers
+  - Wait for live room to fully load (video, chat, UI elements)
+  - Observe the live stream for at least 10 seconds
+  - Verify video is playing smoothly
+  - Check that chat messages are visible (if any)
+  - Verify gift panel button is accessible
+  - Take a screenshot for verification
+  - Exit the live room
+
+run_flags:
+  vision: true
+  reasoning: true
+  steps: 25
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_contains: ["com.dream.like"]
+    description: "Dream Show app is in foreground"
+  - cmd: "mobilerun device screenshot"
+    save_to: live_stream_evidence.png
+    description: "Screenshot of live stream captured"
+  - judge: ai_vision
+    description: "Live stream video is playing with proper UI layout including chat area and interaction buttons"
+
+timeout: 300
+
+cleanup: |
+  mobilerun device press back
+  mobilerun device press back
+  mobilerun device press back
+  mobilerun device press home

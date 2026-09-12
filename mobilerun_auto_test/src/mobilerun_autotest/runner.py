@@ -19,10 +19,49 @@ from typing import Callable
 
 try:
     from mobilerun.config_manager import MobileConfig
-    from mobilerun.config_manager.loader import load_config
 except ImportError:
+    # mobilerun may not be installed yet; bootstrap installs it in __init__.
     MobileConfig = None
-    load_config = None
+
+
+def _load_mobilerun_config(config_path: Path | str | None, print_fn=None):
+    """
+    Load a MobileConfig, installing mobilerun first if it is missing.
+
+    Falls back to an all-defaults MobileConfig when no config file exists yet,
+    which is the normal state for a tester who has not run `mobilerun configure`.
+    """
+    global MobileConfig
+
+    from mobilerun_autotest.bootstrap import ensure_mobilerun
+
+    ensure_mobilerun(need_cli=True, need_library=True, print_fn=print_fn)
+
+    from mobilerun.config_manager import MobileConfig as _MobileConfig
+
+    MobileConfig = _MobileConfig
+
+    try:
+        from mobilerun.config_manager.loader import ConfigLoader
+
+        return ConfigLoader().load(config_path)
+    except Exception as exc:  # noqa: BLE001 - any load failure falls back to defaults
+        logger.debug("Config load failed (%s); using defaults", exc)
+        from mobilerun.config_manager import (
+            AgentConfig,
+            DeviceConfig,
+            LoggingConfig,
+            ToolsConfig,
+            TracingConfig,
+        )
+
+        return _MobileConfig(
+            agent=AgentConfig(),
+            device=DeviceConfig(),
+            tools=ToolsConfig(),
+            logging=LoggingConfig(),
+            tracing=TracingConfig(),
+        )
 
 from mobilerun_autotest.compiler import TestCaseCompiler
 from mobilerun_autotest.executor import CaseExecutor
@@ -85,26 +124,8 @@ class TestRunner:
             rate_limit: Max agent executions per second (None = unlimited)
             print_fn: Output function for progress messages
         """
-        if config is None:
-            try:
-                config = load_config(config_path)
-            except Exception:
-                from mobilerun.config_manager import (
-                    AgentConfig,
-                    DeviceConfig,
-                    LoggingConfig,
-                    ToolsConfig,
-                    TracingConfig,
-                )
-                config = MobileConfig(
-                    agent=AgentConfig(),
-                    device=DeviceConfig(),
-                    tools=ToolsConfig(),
-                    logging=LoggingConfig(),
-                    tracing=TracingConfig(),
-                )
-
-        self.config = config
+        self._config = config
+        self._config_path = config_path
         self.device_id = device_id
         self.cases_dir = Path(cases_dir)
         self.report_dir = Path(report_dir) if report_dir else DEFAULT_REPORT_DIR
@@ -114,6 +135,22 @@ class TestRunner:
         self._shared: SharedResources | None = None
         self._compiler = TestCaseCompiler()
         self._last_run_time: float = 0.0
+
+    @property
+    def config(self) -> MobileConfig:
+        """
+        MobileConfig for this run, loaded on first use.
+
+        Loading is deferred so offline commands (e.g. --show-goals) work without
+        mobilerun installed; the first real access installs it if necessary.
+        """
+        if self._config is None:
+            self._config = _load_mobilerun_config(self._config_path, print_fn=self.print_fn)
+        return self._config
+
+    @config.setter
+    def config(self, value: MobileConfig) -> None:
+        self._config = value
 
     async def initialize(self):
         """

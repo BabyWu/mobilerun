@@ -5,34 +5,82 @@ Key optimization: Driver, LLMs, and state providers are expensive to initialize.
 By sharing them, we achieve 90%+ performance improvement over subprocess approach.
 """
 
+from __future__ import annotations
+
+import copy
 import logging
 from pathlib import Path
 
+# mobilerun symbols are bound lazily: testers may run this package before
+# mobilerun is installed, and bootstrap.ensure_mobilerun() can install it at
+# runtime. Binding at import time would freeze those names to None.
+adb = None
+load_agent_llms = None
+MobileConfig = None
+AndroidDriver = None
+create_ios_driver = None
+discover_ios_device = None
+MCPClientManager = None
+ConciseFilter = None
+DetailedFilter = None
+IndexedFormatter = None
+IOSStateProvider = None
+AndroidStateProvider = None
+
+
+def load_mobilerun_symbols(auto_install: bool = True) -> bool:
+    """
+    Import mobilerun into this module's globals, installing it if needed.
+
+    Returns True when every symbol is bound. Safe to call repeatedly; it is a
+    no-op once the imports have succeeded.
+    """
+    global adb, load_agent_llms, MobileConfig, AndroidDriver
+    global create_ios_driver, discover_ios_device, MCPClientManager
+    global ConciseFilter, DetailedFilter, IndexedFormatter
+    global IOSStateProvider, AndroidStateProvider
+
+    if AndroidDriver is not None:
+        return True
+
+    from mobilerun_autotest.bootstrap import ensure_mobilerun
+
+    ensure_mobilerun(auto_install=auto_install, need_cli=False, need_library=True)
+
+    from async_adbutils import adb as _adb
+    from mobilerun.agent.utils.llm_loader import load_agent_llms as _load_agent_llms
+    from mobilerun.config_manager import MobileConfig as _MobileConfig
+    from mobilerun.mcp.client import MCPClientManager as _MCPClientManager
+    from mobilerun.tools.filters import ConciseFilter as _ConciseFilter
+    from mobilerun.tools.filters import DetailedFilter as _DetailedFilter
+    from mobilerun.tools.formatters import IndexedFormatter as _IndexedFormatter
+    from mobilerun.tools.ui.ios_provider import IOSStateProvider as _IOSStateProvider
+    from mobilerun.tools.ui.provider import AndroidStateProvider as _AndroidStateProvider
+    from mobilerun_core_local.driver.android import AndroidDriver as _AndroidDriver
+    from mobilerun_core_local.driver.ios import create_ios_driver as _create_ios_driver
+    from mobilerun_core_local.driver.ios import discover_ios_device as _discover_ios_device
+
+    adb = _adb
+    load_agent_llms = _load_agent_llms
+    MobileConfig = _MobileConfig
+    AndroidDriver = _AndroidDriver
+    create_ios_driver = _create_ios_driver
+    discover_ios_device = _discover_ios_device
+    MCPClientManager = _MCPClientManager
+    ConciseFilter = _ConciseFilter
+    DetailedFilter = _DetailedFilter
+    IndexedFormatter = _IndexedFormatter
+    IOSStateProvider = _IOSStateProvider
+    AndroidStateProvider = _AndroidStateProvider
+    return True
+
+
+# Best-effort eager bind so type hints and existing importers keep working when
+# mobilerun is already present. Never installs anything at import time.
 try:
-    from async_adbutils import adb
-    from mobilerun.agent.utils.llm_loader import load_agent_llms
-    from mobilerun.config_manager import MobileConfig
-    from mobilerun_core_local.driver.android import AndroidDriver
-    from mobilerun_core_local.driver.ios import create_ios_driver, discover_ios_device
-    from mobilerun.mcp.client import MCPClientManager
-    from mobilerun.tools.filters import ConciseFilter, DetailedFilter
-    from mobilerun.tools.formatters import IndexedFormatter
-    from mobilerun.tools.ui.ios_provider import IOSStateProvider
-    from mobilerun.tools.ui.provider import AndroidStateProvider
-except ImportError:
-    # For standalone testing without full mobilerun installation
-    adb = None
-    load_agent_llms = None
-    MobileConfig = None
-    AndroidDriver = None
-    create_ios_driver = None
-    discover_ios_device = None
-    MCPClientManager = None
-    ConciseFilter = None
-    DetailedFilter = None
-    IndexedFormatter = None
-    IOSStateProvider = None
-    AndroidStateProvider = None
+    load_mobilerun_symbols(auto_install=False)
+except Exception:  # noqa: BLE001 - missing mobilerun is handled in initialize()
+    pass
 
 logger = logging.getLogger("mobilerun_autotest")
 
@@ -80,6 +128,9 @@ class SharedResources:
         self.device_id = device_id
 
         logger.info("🔧 Initializing shared resources...")
+
+        # 0. Guarantee mobilerun is installed and its symbols are bound
+        load_mobilerun_symbols()
 
         # 1. Create device driver
         await self._initialize_driver()
@@ -225,7 +276,7 @@ class SharedResources:
         Returns:
             New MobileConfig with merged settings
         """
-        config = self.config.model_copy(deep=True)
+        config = copy.deepcopy(self.config)
 
         for key, value in run_flags.items():
             if key == "steps":

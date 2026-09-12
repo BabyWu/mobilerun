@@ -7,7 +7,7 @@ name = "mobilerun-autotest"
 version = "3.0.0"
 description = "AI-powered mobile automation testing framework using MobileAgent API"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.14"
 license = {text = "MIT"}
 authors = [
     {name = "MobileRun Team"}
@@ -17,12 +17,16 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Testing",
 ]
 
+# mobilerun is intentionally NOT a hard dependency: it is installed into a
+# public (user-global) environment by mobilerun_autotest.bootstrap so that a
+# single mobilerun serves every project and app under test.
+# See https://github.com/droidrun/mobilerun
 dependencies = [
     "pyyaml>=6.0",
     "rich>=13.0.0",
@@ -33,6 +37,10 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
+]
+# Opt-in: pull mobilerun in as a normal dependency instead of bootstrapping it.
+mobilerun = [
+    "mobilerun>=0.6.17",
 ]
 
 [project.scripts]

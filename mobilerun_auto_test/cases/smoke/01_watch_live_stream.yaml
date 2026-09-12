@@ -1,0 +1,40 @@
+id: watch_live_stream
+title: Watch Live Stream - Smoke Test
+priority: smoke
+
+setup: |
+  mobilerun device press home
+
+test_data:
+  app_package: "com.dream.like"
+  login_required: true
+
+steps:
+  - Open Dream Show app (com.dream.like)
+  - Wait for app to fully load (skip login if already logged in)
+  - Navigate to Home tab if not already there
+  - Find and tap on any active live stream from the list
+  - Wait for live stream to load and start playing
+  - Verify live room is displayed with video playing
+
+run_flags:
+  vision: true
+  reasoning: true
+  steps: 15
+
+verify:
+  - cmd: "mobilerun device ui"
+    expect_contains: ["com.dream.like"]
+    description: "Dream Show app is running"
+  - cmd: "mobilerun device ui"
+    expect_contains: ["LivePlayActivity"]
+    description: "Live stream viewing screen is active"
+  - judge: ai_vision
+    description: "Live stream video is playing and UI elements (chat, gifts panel) are visible"
+
+timeout: 180
+
+cleanup: |
+  mobilerun device press back
+  mobilerun device press back
+  mobilerun device press home

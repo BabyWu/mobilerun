@@ -13,27 +13,26 @@ echo "✓ Checking Python version..."
 python_version=$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
 echo "  Python version: $python_version"
 
-if [ "$(echo "$python_version < 3.10" | bc)" -eq 1 ]; then
-    echo "  ❌ Error: Python 3.10+ required, found $python_version"
+# mobilerun 要求 >=3.11,<3.14
+if ! python -c 'import sys; sys.exit(0 if (3,11) <= sys.version_info[:2] < (3,14) else 1)'; then
+    echo "  ❌ Error: mobilerun requires Python >=3.11,<3.14, found $python_version"
     exit 1
 fi
 echo ""
 
-# 检查mobilerun是否已安装
-echo "✓ Checking mobilerun installation..."
-if command -v mobilerun &> /dev/null; then
-    mobilerun_version=$(mobilerun --version 2>&1 | head -1 || echo "unknown")
-    echo "  mobilerun found: $mobilerun_version"
-else
-    echo "  ⚠️  Warning: mobilerun not found in PATH"
-    echo "     Install with: pip install mobilerun"
-fi
-echo ""
-
-# 安装mobilerun-autotest
+# 安装 mobilerun-autotest（bootstrap 依赖它来检测/安装 mobilerun）
 echo "✓ Installing mobilerun-autotest..."
 pip install -e . -q
 echo "  Installation complete"
+echo ""
+
+# 检查并安装 mobilerun（公共环境，所有被测应用共用）
+# 参考: https://github.com/droidrun/mobilerun
+echo "✓ Checking / installing mobilerun (public environment)..."
+if ! mobilerun-autotest --check-env; then
+    echo "  ❌ Error: mobilerun environment not ready"
+    exit 1
+fi
 echo ""
 
 # 验证安装
@@ -142,11 +141,10 @@ echo "  mobilerun-autotest --suite smoke --debug"
 echo ""
 echo "Documentation:"
 echo "  - README.md          - Full documentation"
-echo "  - QUICKSTART.md      - 5-minute tutorial"
 echo "  - examples/          - Code examples"
 echo ""
 echo "Next Steps:"
-echo "  1. Read QUICKSTART.md"
+echo "  1. Read README.md"
 echo "  2. Review cases/smoke/*.yaml examples"
 echo "  3. Run: mobilerun-autotest --suite smoke --show-goals"
 echo ""
